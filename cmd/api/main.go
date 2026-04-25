@@ -5,11 +5,13 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/pauljomy/snippet_backend/internals/models"
 )
 
 type application struct {
-	logger *slog.Logger
-	DSN    string
+	logger   *slog.Logger
+	snippets *models.SnippetModel
 }
 
 func main() {
@@ -23,23 +25,25 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	app := &application{
-		logger: logger,
-		DSN:    dsn,
-	}
-
-	conn, err := app.connectDB()
+	db, err := openDB(dsn)
 	if err != nil {
-		app.logger.Error(err.Error())
+		logger.Error(err.Error())
 		os.Exit(1)
 	}
-	defer conn.Close()
+
+	logger.Info("Connected to postgres DB")
+	defer db.Close()
+
+	app := &application{
+		logger:   logger,
+		snippets: &models.SnippetModel{DB: db},
+	}
 
 	logger.Info("Starting server", "addr", addr)
 
 	err = http.ListenAndServe(addr, app.routes())
 	if err != nil {
-		app.logger.Error(err.Error())
+		logger.Error(err.Error())
 		os.Exit(1)
 	}
 
