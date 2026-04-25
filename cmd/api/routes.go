@@ -9,8 +9,10 @@ import (
 
 func (app *application) routes() http.Handler {
 	mux := chi.NewRouter()
+	mux.Use(app.logRequest)
 	mux.Use(middleware.Recoverer)
-	mux.Use(app.enableCORS)
+	mux.Use(commonHeaders)
+	mux.Use(enableCORS)
 
 	mux.Get("/", app.Home)
 	mux.Get("/snippet/view/{id}", app.snippetView)
