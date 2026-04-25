@@ -20,7 +20,7 @@ func main() {
 	var dsn string
 
 	flag.StringVar(&addr, "addr", ":4000", "HTTP network port address")
-	flag.StringVar(&dsn, "dsn", "host=localhost port=5434 user=web password=pass dbname=snippetbox timezone=UTC connect_timeout=5", "Postgres Database")
+	flag.StringVar(&dsn, "dsn", "host=localhost port=5431 user=web password=pass dbname=snippetbox sslmode=disable timezone=UTC connect_timeout=5", "Postgres Database")
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))

@@ -2,33 +2,28 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi"
+	"github.com/pauljomy/snippet_backend/internals/models"
 )
 
 func (app *application) Home(w http.ResponseWriter, r *http.Request) {
-	payload := struct {
-		Status  string `json:"status"`
-		Message string `json:"message"`
-		Version string `json:"version"`
-	}{
-		Status:  "ok",
-		Message: "API is running",
-		Version: "1.0.0",
-	}
 
-	out, err := json.Marshal(payload)
+	snippets, err := app.snippets.Latest()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		app.serverError(w, r, err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(out)
+
+	if err := json.NewEncoder(w).Encode(snippets); err != nil {
+		app.serverError(w, r, err)
+	}
 
 }
 
@@ -39,7 +34,21 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "Display specific snippet with id %d", id)
+	snippet, err := app.snippets.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(w, r)
+		} else {
+			app.serverError(w, r, err)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(snippet); err != nil {
+		app.serverError(w, r, err)
+	}
 }
 
 func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +56,19 @@ func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
+
 	title := "O snail"
-	content := "O snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n– Kobayashi Issa"
+	content := "O snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n- Kobayashi Issa"
 	expires := 7
+
+	id, err := app.snippets.Insert(title, content, expires)
+	if err != nil {
+		app.serverError(w, r, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]int{"id": id})
+
 }
